@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_ID: str
     GITHUB_CLIENT_SECRET: str
     GITHUB_REDIRECT_URI: AnyHttpUrl
+    GITHUB_AUTHORIZE_URL: AnyHttpUrl = "https://github.com/login/oauth/authorize"
+    GITHUB_ACCESS_TOKEN_URL: AnyHttpUrl = "https://github.com/login/oauth/access_token"
+    GITHUB_API_BASE_URL: AnyHttpUrl = "https://api.github.com/"
 
     # AI / Vector DB
     OPENAI_API_KEY: str
