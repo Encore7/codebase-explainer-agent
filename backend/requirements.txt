@@ -3,3 +3,7 @@ uvicorn[standard]
 ruff
 grype
 pytest
+python-jose
+httpx
+authlib
+itsdangerous
