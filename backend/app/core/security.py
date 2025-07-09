@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Annotated, Dict, Optional
 
 from authlib.integrations.starlette_client import OAuth
@@ -14,9 +14,9 @@ oauth.register(
     name="github",
     client_id=settings.GITHUB_CLIENT_ID,
     client_secret=settings.GITHUB_CLIENT_SECRET,
-    authorize_url=settings.GITHUB_AUTHORIZE_URL,
-    access_token_url=settings.GITHUB_ACCESS_TOKEN_URL,
-    api_base_url=settings.GITHUB_API_BASE_URL,
+    authorize_url=str(settings.GITHUB_AUTHORIZE_URL),
+    access_token_url=str(settings.GITHUB_ACCESS_TOKEN_URL),
+    api_base_url=str(settings.GITHUB_API_BASE_URL),
     client_kwargs={"scope": "read:user"},
 )
 
@@ -29,7 +29,7 @@ def create_access_token(
     expires_delta: Annotated[Optional[timedelta], ""] = None,
 ) -> str:
     to_encode = data.copy()
-    expire = datetime.now(datetime.UTC) + (
+    expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     to_encode.update({"exp": expire})
