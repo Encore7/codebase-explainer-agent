@@ -25,8 +25,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/token
 
 
 def create_access_token(
-    data: Annotated[Dict[str, str], ""],
-    expires_delta: Annotated[Optional[timedelta], ""] = None,
+    data: Annotated[Dict[str, str], "Data to encode in JWT"],
+    expires_delta: Annotated[Optional[timedelta], "Expiry Time"] = None,
 ) -> str:
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (
@@ -37,7 +37,7 @@ def create_access_token(
 
 
 def get_current_user(
-    token: Annotated[str, ""] = Depends(oauth2_scheme),
+    token: Annotated[str, "Protected Access Token"] = Depends(oauth2_scheme),
 ) -> Dict[str, str]:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
