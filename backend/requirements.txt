@@ -7,3 +7,10 @@ python-jose
 httpx
 authlib
 itsdangerous
+prometheus-fastapi-instrumentator
+structlog
+python-json-logger
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-instrumentation
+opentelemetry-exporter-otlp
