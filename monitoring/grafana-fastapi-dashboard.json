@@ -1,0 +1,68 @@
+{
+    "id": null,
+    "title": "FastAPI + Prometheus",
+    "timezone": "browser",
+    "editable": true,
+    "schemaVersion": 30,
+    "version": 1,
+    "refresh": "10s",
+    "panels": [
+      {
+        "type": "stat",
+        "title": "Total HTTP Requests",
+        "targets": [
+          {
+            "expr": "sum(increase(http_requests_total[5m]))",
+            "format": "time_series"
+          }
+        ],
+        "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 }
+      },
+      {
+        "type": "timeseries",
+        "title": "Requests Over Time",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[1m])",
+            "legendFormat": "{{method}} {{path}}",
+            "format": "time_series"
+          }
+        ],
+        "gridPos": { "x": 6, "y": 0, "w": 18, "h": 9 }
+      },
+      {
+        "type": "barchart",
+        "title": "Requests by Status Code",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total[1m])) by (status)",
+            "format": "time_series"
+          }
+        ],
+        "gridPos": { "x": 0, "y": 4, "w": 12, "h": 9 }
+      },
+      {
+        "type": "gauge",
+        "title": "In-Progress Requests",
+        "targets": [
+          {
+            "expr": "http_requests_in_progress",
+            "format": "time_series"
+          }
+        ],
+        "gridPos": { "x": 12, "y": 4, "w": 6, "h": 4 }
+      },
+      {
+        "type": "timeseries",
+        "title": "Average Request Duration",
+        "targets": [
+          {
+            "expr": "rate(http_request_duration_seconds_sum[1m]) / rate(http_request_duration_seconds_count[1m])",
+            "format": "time_series"
+          }
+        ],
+        "gridPos": { "x": 0, "y": 13, "w": 24, "h": 9 }
+      }
+    ]
+  }
+  
