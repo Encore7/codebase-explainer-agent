@@ -1,31 +1,32 @@
 import logging
+import os
 
 import structlog
 from pythonjsonlogger import jsonlogger
 
-LOG_FILE = "/var/log/fastapi/app.log"  # or local path "./logs/app.log"
+# Create local dir if logging to file
+LOG_DIR = "./logs"
+LOG_FILE = os.path.join(LOG_DIR, "app.log")
+os.makedirs(LOG_DIR, exist_ok=True)
 
 
 def configure_logging():
-    # Stream (console) handler
     stream_handler = logging.StreamHandler()
-    stream_formatter = jsonlogger.JsonFormatter(
+    formatter = jsonlogger.JsonFormatter(
         "%(asctime)s %(levelname)s %(name)s %(message)s"
     )
-    stream_handler.setFormatter(stream_formatter)
 
-    # File handler
+    stream_handler.setFormatter(formatter)
+
     file_handler = logging.FileHandler(LOG_FILE)
-    file_handler.setFormatter(stream_formatter)
+    file_handler.setFormatter(formatter)
 
-    # Set up root logger
     root = logging.getLogger()
     root.setLevel(logging.INFO)
     root.handlers.clear()
     root.addHandler(stream_handler)
     root.addHandler(file_handler)
 
-    # Configure structlog
     structlog.configure(
         processors=[
             structlog.processors.TimeStamper(fmt="iso"),
