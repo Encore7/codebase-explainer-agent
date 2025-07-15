@@ -1,3 +1,4 @@
+import structlog
 from fastapi import APIRouter, Depends
 
 from backend.app.api.endpoints.auth import router as auth_router
@@ -5,15 +6,22 @@ from backend.app.api.endpoints.health import router as health_router
 from backend.app.api.endpoints.protected import router as protected_router
 from backend.app.core.security import get_current_user
 
+logger = structlog.get_logger()
+
+# Root API router
 router = APIRouter()
 
-# Public endpoints
+# Public Routes
 router.include_router(health_router, prefix="/health", tags=["Health"])
 router.include_router(auth_router, prefix="/auth", tags=["Auth"])
+logger.info("Included public routers", routes=["/health", "/auth"])
 
-# Protected endpoints
+# Protected Routes
 protected = APIRouter(
-    prefix="/protected", tags=["Protected"], dependencies=[Depends(get_current_user)]
+    prefix="/protected",
+    tags=["Protected"],
+    dependencies=[Depends(get_current_user)],
 )
 protected.include_router(protected_router, prefix="", tags=["Protected"])
 router.include_router(protected)
+logger.info("Included protected routers", routes=["/protected"])

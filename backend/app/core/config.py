@@ -1,4 +1,3 @@
-import secrets
 from typing import Any, Literal
 
 from pydantic import AnyHttpUrl, field_validator
@@ -21,21 +20,23 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # core
+    # Core App Info
     API_V1_STR: str = "/api/v1"
     VERSION: str = "0.1.0"
     PROJECT_NAME: str = "AI Codebase Backend"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
 
-    # single secret for JWT & other uses
-    SECRET_KEY: str = secrets.token_urlsafe(32)
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60  # 1 hour
+    # Secrets & Expiry
+    SECRET_KEY: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+
+    # PostgreSQL & Redis
+    DATABASE_URL: str
+    REDIS_URL: str
 
     # CORS
     FRONTEND_CORS_ORIGINS: list[str] = ["http://localhost:3000"]
-
-    # service URLs
-    SERVER_HOST: AnyHttpUrl
 
     # GitHub OAuth
     GITHUB_CLIENT_ID: str
@@ -45,9 +46,12 @@ class Settings(BaseSettings):
     GITHUB_ACCESS_TOKEN_URL: AnyHttpUrl = "https://github.com/login/oauth/access_token"
     GITHUB_API_BASE_URL: AnyHttpUrl = "https://api.github.com/"
 
-    # AI / Vector DB
+    # AI / VectorDB
     OPENAI_API_KEY: str
     CHROMA_DB_URL: AnyHttpUrl
+
+    # External Server
+    SERVER_HOST: AnyHttpUrl
 
     @field_validator("FRONTEND_CORS_ORIGINS", mode="before")
     @classmethod

@@ -1,11 +1,11 @@
+import structlog
 from fastapi import APIRouter
 
 router = APIRouter()
+logger = structlog.get_logger()
 
 
 @router.get("/", summary="Health check")
 async def health_check():
-    """
-    Simple endpoint to verify the service is up.
-    """
+    logger.info("Health check passed")
     return {"status": "ok"}
