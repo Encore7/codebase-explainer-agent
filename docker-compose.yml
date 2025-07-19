@@ -13,6 +13,7 @@ services:
     depends_on:
       - db
       - redis
+      - otel-collector
     restart: unless-stopped
 
   db:
@@ -35,60 +36,85 @@ services:
     ports:
       - "6379:6379"
 
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
-    ports:
-      - "3001:3000"
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    command: ["--config=/etc/otel-collector.yaml"]
     volumes:
-      - grafana-data:/var/lib/grafana
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - ./monitoring/otel-collector.yaml:/etc/otel-collector.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
     depends_on:
-      - prometheus
-      - loki
       - tempo
-
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - loki
+      - mimir
 
   loki:
-      image: grafana/loki:latest
-      ports:
-        - "3100:3100"
-      user: root
-      command: -config.file=/etc/loki/config.yaml
-      volumes:
-        - ./monitoring/loki-config.yaml:/etc/loki/config.yaml
-        - ./loki-data:/tmp/loki
-
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/config.yaml
+    volumes:
+      - ./monitoring/loki-config.yaml:/etc/loki/config.yaml:ro
+      - loki-data:/tmp/loki
 
   tempo:
     image: grafana/tempo:latest
+    container_name: tempo
     ports:
       - "3200:3200"
       - "4318:4318"
     command: -config.file=/etc/tempo/local-config.yaml
     volumes:
-      - ./monitoring/tempo-config.yaml:/etc/tempo/local-config.yaml
+      - ./monitoring/tempo-config.yaml:/etc/tempo/local-config.yaml:ro
 
-  promtail:
-    image: grafana/promtail:2.9.1
-    container_name: promtail
+  mimir:
+    image: grafana/mimir:2.10.0
+    container_name: mimir
+    ports:
+      - "9009:9009"  # HTTP
+      - "8080:8080"  # Remote write / OTLP
     volumes:
-      - ./logs:/var/log/fastapi
-      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml
-    command: -config.file=/etc/promtail/config.yml
+      - ./monitoring/mimir-config.yaml:/etc/mimir/config.yaml:ro
+    command: ["-config.file=/etc/mimir/config.yaml"]
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
     depends_on:
+      - otel-collector
       - loki
+      - tempo
+      - mimir
 
 volumes:
   postgres-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./volume/postgres-data
+      o: bind
+
   grafana-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./volume/grafana-data
+      o: bind
+
   loki-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./volume/loki-data
+      o: bind
+  
