@@ -53,6 +53,11 @@ class Settings(BaseSettings):
     # External Server
     SERVER_HOST: AnyHttpUrl
 
+    # OTLP Exporters
+    OTLP_TRACES_URL: AnyHttpUrl = "http://tempo:4318/v1/traces"
+    OTLP_METRICS_URL: AnyHttpUrl = "http://mimir:4318/v1/metrics"
+    OTLP_LOGS_URL: AnyHttpUrl = "http://loki:4318/v1/logs"
+
     @field_validator("FRONTEND_CORS_ORIGINS", mode="before")
     @classmethod
     def _normalize_cors(cls, v: Any) -> list[str]:

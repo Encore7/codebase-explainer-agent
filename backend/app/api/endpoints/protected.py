@@ -1,20 +1,27 @@
-import structlog
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+import logging
+from typing import Annotated
 
+from fastapi import APIRouter, Depends
+from opentelemetry.trace import get_current_span
+
+from backend.app.api_model.user import UserOut
 from backend.app.core.security import get_current_user
+from backend.app.models.user import User
 
 router = APIRouter()
-logger = structlog.get_logger()
-
-
-class UserOut(BaseModel):
-    id: int
-    username: str
-    scopes: list[str]
+logger = logging.getLogger(__name__)
 
 
 @router.get("/me", response_model=UserOut, summary="Get current user info")
-async def read_current_user(current_user: dict = Depends(get_current_user)):
-    logger.info("Fetched current user", user=current_user["username"])
-    return current_user
+async def read_current_user(current_user: Annotated[User, Depends(get_current_user)]):
+    span = get_current_span()
+    ctx = span.get_span_context()
+    logger.info(
+        "Fetched current user",
+        extra={
+            "user": current_user.username,
+            "trace_id": format(ctx.trace_id, "032x"),
+            "span_id": format(ctx.span_id, "016x"),
+        },
+    )
+    return UserOut.from_orm(current_user)

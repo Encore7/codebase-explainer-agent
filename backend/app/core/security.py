@@ -1,21 +1,23 @@
+import logging
 import secrets
 from datetime import UTC, datetime, timedelta
-from typing import Annotated, Any, Dict, List, Optional
+from typing import Annotated, Any, List
 
 import redis.asyncio as aioredis
-import structlog
 from authlib.integrations.starlette_client import OAuth
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
+from opentelemetry.trace import get_current_span
 
+from backend.app.api_model.user import UserOut
 from backend.app.core.config import settings
+from backend.app.core.crud import get_or_create_user
 from backend.app.core.db import get_db
-from backend.app.ultils.crud import get_or_create_user
 
-logger = structlog.get_logger()
+logger = logging.getLogger(__name__)
 
-#  GitHub OAuth
+# GitHub OAuth
 oauth = OAuth()
 oauth.register(
     name="github",
@@ -32,7 +34,6 @@ oauth2_scheme: Annotated[str, Depends] = OAuth2PasswordBearer(
 )
 
 
-#  Internal Helpers
 def _now() -> datetime:
     return datetime.now(UTC)
 
@@ -43,97 +44,123 @@ def _get_redis():
     )
 
 
-#  Token Creation
+def _trace_attrs() -> dict[str, str]:
+    span = get_current_span()
+    ctx = span.get_span_context()
+    return {
+        "trace_id": format(ctx.trace_id, "032x"),
+        "span_id": format(ctx.span_id, "016x"),
+    }
+
+
 def create_access_token(
     subject: Annotated[str, "User identifier"],
-    scopes: Annotated[Optional[List[str]], "Protected API scope of token"] = None,
-    expires_delta: Annotated[Optional[timedelta], "Token lifespan"] = None,
+    scopes: Annotated[List[str], "Token scopes"] = [],
+    expires_delta: Annotated[timedelta | None, "Lifespan override"] = None,
 ) -> str:
-    to_encode: Dict[str, Any] = {"sub": subject, "type": "access"}
-    if scopes:
-        to_encode["scopes"] = scopes
-    expire = _now() + (
+    payload = {"sub": subject, "type": "access", "scopes": scopes}
+    payload["exp"] = _now() + (
         expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    to_encode["exp"] = expire
-    token = jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
-    logger.info("Access token created", user=subject, scopes=scopes)
+    token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+    logger.info(
+        "Access token created",
+        extra={"user": subject, "scopes": scopes, **_trace_attrs()},
+    )
     return token
 
 
 async def create_refresh_token(subject: Annotated[str, "User ID"]) -> str:
     jti = secrets.token_urlsafe(16)
-    to_encode = {"sub": subject, "type": "refresh", "jti": jti}
-    expire = _now() + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
-    to_encode["exp"] = expire
-    token = jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
+    payload = {
+        "sub": subject,
+        "type": "refresh",
+        "jti": jti,
+        "exp": _now() + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES),
+    }
+    token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
     await _get_redis().set(
         f"refresh_jti:{jti}", subject, ex=settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60
     )
-    logger.info("Refresh token created", user=subject, jti=jti)
+    logger.info(
+        "Refresh token created", extra={"user": subject, "jti": jti, **_trace_attrs()}
+    )
     return token
 
 
-#  Token Revocation
-async def revoke_refresh_token(token: Annotated[str, "JWT Refresh Token"]):
+async def revoke_refresh_token(token: Annotated[str, "JWT Refresh Token"]) -> None:
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
         jti = payload.get("jti")
         if jti:
             await _get_redis().delete(f"refresh_jti:{jti}")
-            logger.info("Refresh token revoked", jti=jti)
+            logger.info("Refresh token revoked", extra={"jti": jti, **_trace_attrs()})
     except JWTError:
-        logger.warning("Refresh token revocation failed", reason="Invalid/expired")
+        logger.warning(
+            "Refresh token revocation failed",
+            extra={"reason": "Invalid or expired", **_trace_attrs()},
+        )
 
 
-#  Token Validation
 async def decode_token(
     token: Annotated[str, "JWT Access or Refresh Token"],
     expected_type: Annotated[str, "Expected token type"] = "access",
-) -> Dict[str, Any]:
-    creds_exc = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid or expired token",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+) -> dict:
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
         if payload.get("type") != expected_type:
-            raise creds_exc
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token type",
+            )
 
         if expected_type == "refresh":
             jti = payload.get("jti")
             if not jti or not await _get_redis().exists(f"refresh_jti:{jti}"):
-                raise creds_exc
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid or expired refresh token",
+                )
 
         return payload
     except JWTError:
-        logger.warning("JWT validation failed", expected_type=expected_type)
-        raise creds_exc
+        logger.warning(
+            "Token validation failed",
+            extra={"expected_type": expected_type, **_trace_attrs()},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token"
+        )
 
 
-#  Authenticated User Dependency
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
     db: Annotated[Any, Depends(get_db)],
-) -> Dict[str, Any]:
+) -> UserOut:
     payload = await decode_token(token, expected_type="access")
     username = payload["sub"]
     scopes = payload.get("scopes", [])
 
     user = get_or_create_user(db, username=username, github_id=username)
-    logger.info("User authenticated", user=username, scopes=scopes)
+    logger.info(
+        "User authenticated",
+        extra={"user": username, "scopes": scopes, **_trace_attrs()},
+    )
 
-    return {"id": user.id, "username": user.username, "scopes": scopes}
+    return UserOut(id=user.id, username=user.username, scopes=scopes)
 
 
-#  Scope Checker
 def require_scopes(required: Annotated[List[str], "Required scopes"]):
-    async def _checker(current=Depends(get_current_user)):
+    async def _checker(current: Annotated[UserOut, Depends(get_current_user)]):
         for scope in required:
-            if scope not in current["scopes"]:
+            if scope not in current.scopes:
                 logger.warning(
-                    "Missing scope", required=scope, user=current["username"]
+                    "Missing scope",
+                    extra={
+                        "required_scope": scope,
+                        "user": current.username,
+                        **_trace_attrs(),
+                    },
                 )
                 raise HTTPException(status_code=403, detail=f"Missing scope: {scope}")
 

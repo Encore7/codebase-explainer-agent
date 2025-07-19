@@ -1,4 +1,3 @@
-from sqlalchemy.ext.asyncio import create_async_engine  # Optional
 from sqlmodel import Session, SQLModel, create_engine
 
 from backend.app.core.config import settings
@@ -8,6 +7,10 @@ engine = create_engine(
     str(settings.DATABASE_URL),
     pool_pre_ping=True,
 )
+
+
+def init_db():
+    SQLModel.metadata.create_all(engine)
 
 
 # Session factory (used via Depends)
