@@ -174,4 +174,4 @@ cython_debug/
 .pypirc
 
 # Loki data
-loki-data
+volumes
