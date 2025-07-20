@@ -1,6 +1,6 @@
 from sqlmodel import Session, SQLModel, create_engine
 
-from backend.app.core.config import settings
+from app.core.config import settings
 
 # Sync engine (PostgreSQL via psycopg2)
 engine = create_engine(

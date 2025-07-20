@@ -4,10 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from starlette.middleware.sessions import SessionMiddleware
 
-from backend.app.api.router import router as api_router
-from backend.app.core.config import settings
-from backend.app.core.db import engine, init_db
-from backend.app.core.telemetry import get_logger, instrument_fastapi
+from app.api.router import router as api_router
+from app.core.config import settings
+from app.core.db import engine, init_db
+from app.core.telemetry import get_logger, instrument_fastapi
 
 # Initialize logger first
 logger = get_logger(__name__)
@@ -51,4 +51,4 @@ logger.info("Application initialized successfully.")
 
 # Entrypoint
 if __name__ == "__main__":
-    uvicorn.run("backend.app.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

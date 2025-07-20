@@ -7,14 +7,13 @@ from authlib.integrations.starlette_client import OAuth
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from opentelemetry.trace import get_current_span
 
-from backend.app.api_model.user import UserOut
-from backend.app.core.config import settings
-from backend.app.core.crud import get_or_create_user
-from backend.app.core.db import get_db
-from backend.app.core.telemetry import get_logger
-from backend.app.utils.trace import _trace_attrs
+from app.api_model.user import UserOut
+from app.core.config import settings
+from app.core.crud import get_or_create_user
+from app.core.db import get_db
+from app.core.telemetry import get_logger
+from app.utils.trace import _trace_attrs
 
 logger = get_logger(__name__)
 

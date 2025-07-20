@@ -1,9 +1,7 @@
-import logging
-
 from fastapi import APIRouter
 from opentelemetry.trace import get_current_span
 
-from backend.app.core.telemetry import get_logger
+from app.core.telemetry import get_logger
 
 logger = get_logger(__name__)
 

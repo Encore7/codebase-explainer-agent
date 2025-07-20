@@ -2,16 +2,16 @@ from typing import Annotated
 
 from fastapi import APIRouter, Body, HTTPException, Request, status
 
-from backend.app.api_model.token import RefreshTokenRequest, TokenResponse
-from backend.app.core.security import (
+from app.api_model.token import RefreshTokenRequest, TokenResponse
+from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
     oauth,
     revoke_refresh_token,
 )
-from backend.app.core.telemetry import get_logger
-from backend.app.utils.trace import _trace_attrs
+from app.core.telemetry import get_logger
+from app.utils.trace import _trace_attrs
 
 logger = get_logger(__name__)
 router = APIRouter()

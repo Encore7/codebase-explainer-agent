@@ -18,7 +18,7 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-from backend.app.core.config import settings
+from app.core.config import settings
 
 # Declare resource once for all providers
 resource = Resource(attributes={"service.name": settings.PROJECT_NAME})

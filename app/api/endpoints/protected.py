@@ -1,13 +1,12 @@
-import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from opentelemetry.trace import get_current_span
 
-from backend.app.api_model.user import UserOut
-from backend.app.core.security import get_current_user
-from backend.app.core.telemetry import get_logger
-from backend.app.models.user import User
+from app.api_model.user import UserOut
+from app.core.security import get_current_user
+from app.core.telemetry import get_logger
+from app.models.user import User
 
 router = APIRouter()
 

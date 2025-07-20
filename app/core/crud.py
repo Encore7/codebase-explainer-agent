@@ -2,8 +2,8 @@ from typing import Annotated
 
 from sqlalchemy.orm import Session
 
-from backend.app.core.telemetry import get_logger
-from backend.app.models.user import User
+from app.core.telemetry import get_logger
+from app.models.user import User
 
 logger = get_logger(__name__)
 
