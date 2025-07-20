@@ -3,8 +3,11 @@ import logging
 from fastapi import APIRouter
 from opentelemetry.trace import get_current_span
 
+from backend.app.core.telemetry import get_logger
+
+logger = get_logger(__name__)
+
 router = APIRouter()
-logger = logging.getLogger(__name__)
 
 
 @router.get("/", summary="Health check")

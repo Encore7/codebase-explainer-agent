@@ -1,16 +1,19 @@
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from starlette.middleware.sessions import SessionMiddleware
 
 from backend.app.api.router import router as api_router
 from backend.app.core.config import settings
 from backend.app.core.db import engine, init_db
-from backend.app.core.telemetry import setup_otel
+from backend.app.core.telemetry import get_logger, instrument_fastapi
 
-# Initialize FastAPI App
+# Initialize logger first
+logger = get_logger(__name__)
+logger.info("Starting FastAPI application...")
+
+# FastAPI app instance
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
@@ -18,13 +21,10 @@ app = FastAPI(
     docs_url=f"{settings.API_V1_STR}/docs",
 )
 
-# Initialize OpenTelemetry (traces, logs, metrics)
-setup_otel(service_name=settings.PROJECT_NAME)
+# Instrument FastAPI after OTel setup
+instrument_fastapi(app)
 
-# Instrument FastAPI (AFTER OTel init)
-FastAPIInstrumentor.instrument_app(app)
-
-# CORS
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.FRONTEND_CORS_ORIGINS,
@@ -33,19 +33,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Session
+# Add session middleware
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.SECRET_KEY,
     session_cookie="session",
 )
 
-# Routers
+# Register API routes
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
-# Database Initialization
+# DB instrumentation and initialization
 SQLAlchemyInstrumentor().instrument(engine=engine)
 init_db()
+
+logger.info("Application initialized successfully.")
 
 # Entrypoint
 if __name__ == "__main__":

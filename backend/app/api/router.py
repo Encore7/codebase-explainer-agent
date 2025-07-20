@@ -1,13 +1,12 @@
-import logging
-
 from fastapi import APIRouter, Depends
 
 from backend.app.api.endpoints.auth import router as auth_router
 from backend.app.api.endpoints.health import router as health_router
 from backend.app.api.endpoints.protected import router as protected_router
 from backend.app.core.security import get_current_user
+from backend.app.core.telemetry import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Root API router
 router = APIRouter()

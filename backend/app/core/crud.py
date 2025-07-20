@@ -1,11 +1,11 @@
-import logging
 from typing import Annotated
 
 from sqlalchemy.orm import Session
 
+from backend.app.core.telemetry import get_logger
 from backend.app.models.user import User
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def get_user_by_username(

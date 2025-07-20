@@ -1,4 +1,3 @@
-import logging
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, List
@@ -14,8 +13,10 @@ from backend.app.api_model.user import UserOut
 from backend.app.core.config import settings
 from backend.app.core.crud import get_or_create_user
 from backend.app.core.db import get_db
+from backend.app.core.telemetry import get_logger
+from backend.app.utils.trace import _trace_attrs
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # GitHub OAuth
 oauth = OAuth()
@@ -42,15 +43,6 @@ def _get_redis():
     return aioredis.from_url(
         str(settings.REDIS_URL), encoding="utf-8", decode_responses=True
     )
-
-
-def _trace_attrs() -> dict[str, str]:
-    span = get_current_span()
-    ctx = span.get_span_context()
-    return {
-        "trace_id": format(ctx.trace_id, "032x"),
-        "span_id": format(ctx.span_id, "016x"),
-    }
 
 
 def create_access_token(

@@ -6,10 +6,13 @@ from opentelemetry.trace import get_current_span
 
 from backend.app.api_model.user import UserOut
 from backend.app.core.security import get_current_user
+from backend.app.core.telemetry import get_logger
 from backend.app.models.user import User
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
+
+
+logger = get_logger(__name__)
 
 
 @router.get("/me", response_model=UserOut, summary="Get current user info")
