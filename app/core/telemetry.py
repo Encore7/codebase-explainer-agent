@@ -19,11 +19,12 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 from app.core.config import settings
+from app.utils.trace import _trace_attrs
 
 # Declare resource once for all providers
 resource = Resource(attributes={"service.name": settings.PROJECT_NAME})
 
-# Base stdout logging (fallback for local dev/debug)
+# Base stdout logging
 logging.basicConfig(
     level=logging.INFO,
     stream=sys.stdout,
@@ -31,7 +32,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-# LOGGING
+# Logging
 try:
     logger_provider = LoggerProvider(resource=resource)
     logger_provider.add_log_record_processor(
@@ -43,10 +44,10 @@ try:
         )
     )
     handler = LoggingHandler(level=logging.INFO, logger_provider=logger_provider)
-except Exception as e:
-    raise SystemExit(f"[OTel Logging Init Failure] {e}")
+except Exception as exc:
+    raise SystemExit("[OTel Logging Init Failure]") from exc
 
-# TRACING
+# Tracing
 try:
     tracer_provider = TracerProvider(resource=resource)
     tracer_provider.add_span_processor(
@@ -58,10 +59,10 @@ try:
         )
     )
     trace.set_tracer_provider(tracer_provider)
-except Exception as e:
-    raise SystemExit(f"[OTel Tracing Init Failure] {e}")
+except Exception as exc:
+    raise SystemExit("[OTel Tracing Init Failure]") from exc
 
-# METRICS
+# Metrics
 try:
     metric_exporter = OTLPMetricExporter(
         endpoint=f"{settings.OTLP_ENDPOINT}/v1/metrics",
@@ -70,18 +71,20 @@ try:
     metric_reader = PeriodicExportingMetricReader(metric_exporter)
     meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
     set_meter_provider(meter_provider)
-except Exception as e:
-    raise SystemExit(f"[OTel Metrics Init Failure] {e}")
+except Exception as exc:
+    raise SystemExit("[OTel Metrics Init Failure]") from exc
 
 # Instrument External Libraries
 LoggingInstrumentor().instrument(set_logging_format=True)
 RequestsInstrumentor().instrument()
 
 
-# Logger Getter Function
 def get_logger(
     module_name: Optional[str] = None,
 ) -> Annotated[logging.Logger, "Logger instance for the specified module"]:
+    """Get a logger instance for the specified module.
+    If no module name is provided, it defaults to the current module name.
+    """
     if not module_name:
         module_name = __name__
     logger = logging.getLogger(module_name)
@@ -90,9 +93,16 @@ def get_logger(
     return logger
 
 
-# FastAPI Instrumentation Wrapper
 def instrument_fastapi(app):
+    """Instrument FastAPI application with OpenTelemetry.
+    Args:
+        app: FastAPI application instance.
+    """
+
     try:
         FastAPIInstrumentor.instrument_app(app)
-    except Exception as e:
-        raise SystemExit(f"[FastAPI Instrumentation Failure] {e}")
+    except Exception as exc:
+        get_logger(__name__).exception(
+            "FastAPI instrumentation failed", extra=_trace_attrs()
+        )
+        raise SystemExit("[FastAPI Instrumentation Failure]") from exc

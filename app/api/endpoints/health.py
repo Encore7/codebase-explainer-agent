@@ -1,22 +1,24 @@
 from fastapi import APIRouter
-from opentelemetry.trace import get_current_span
 
 from app.core.telemetry import get_logger
-
-logger = get_logger(__name__)
+from app.utils.trace import _trace_attrs
 
 router = APIRouter()
+logger = get_logger(__name__)
 
 
 @router.get("/", summary="Health check")
 async def health_check():
-    span = get_current_span()
-    ctx = span.get_span_context()
-    logger.info(
-        "Health check passed",
-        extra={
-            "trace_id": format(ctx.trace_id, "032x"),
-            "span_id": format(ctx.span_id, "016x"),
-        },
-    )
-    return {"status": "ok"}
+    """Perform a health check to ensure the service is running.
+    This endpoint is used to verify that the service is operational.
+    Returns:
+        dict: A dictionary indicating the service status.
+    Raises:
+        RuntimeError: If the health check fails.
+    """
+    try:
+        logger.info("Health check passed", extra=_trace_attrs())
+        return {"status": "ok"}
+    except Exception as exc:
+        logger.exception("Health check failed", extra=_trace_attrs())
+        raise RuntimeError("Health check error") from exc
