@@ -29,5 +29,13 @@ opentelemetry-instrumentation-sqlalchemy
 opentelemetry-instrumentation-requests
 opentelemetry-instrumentation-logging
 
+# Rate limiting
+slowapi
+
+# Repo scraping
+pydriller
+openai 
+chromadb
+
 # Test
 pytest
