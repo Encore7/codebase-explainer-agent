@@ -36,7 +36,7 @@ Codebase Explainer Agent is a FastAPI application for ingesting Git repositories
 | `POST /api/v1/auth/login`   | GitHub OAuth login                  | Public       |
 | `POST /api/v1/auth/logout`  | Revoke refresh token                | Auth         |
 | `GET /api/v1/protected/me`  | Get current user info               | Auth         |
-| `POST /api/v1/repos/`       | Ingest a Git repo                   | `ingest`     |
+| `POST /api/v1/repos/ingest` | Ingest a Git repo                   | `ingest`     |
 | `GET /api/v1/repos/{id}/status` | Check ingest status             | `ingest`     |
 | `GET /api/v1/rate_limited`  | Rate-limited test endpoint          | `rate_limited` |
 | `WS  /api/v1/chat/{repo_id}`| Ask questions about ingested repo   | `chat`       |
@@ -56,24 +56,24 @@ Codebase Explainer Agent is a FastAPI application for ingesting Git repositories
 
 ## Running Locally
 
-### 1. Clone the Repo
+#### 1. Clone the Repo
 
 ```bash
 git clone git@github.com:Encore7/codebase-explainer-agent.git
 cd codebase-explainer-agent
 ```
 
-### 2. Set Environment Variables
+#### 2. Set Environment Variables
 
 Set the environment variables from .env.example file
 
-### 3. Run with Docker Compose
+#### 3. Run with Docker Compose
 
 ```bash
 docker-compose up --build
 ```
 
-### 4. Access Docs
+#### 4. Access Docs
 - Swagger: http://localhost:8000/api/v1/docs
 - Redoc: http://localhost:8000/api/v1/redoc
 
@@ -172,15 +172,6 @@ app/
 ├── utils/            # Tracing, logging, helpers
 └── main.py           # FastAPI entrypoint
 ```
-
----
-
-## 📌 Future Enhancements
-
-- [ ] GitHub webhook trigger for automatic ingestion  
-- [ ] Switch to Celery for scalable async tasks  
-- [ ] RAG-enhanced agent with retrieval fallback  
-- [ ] Granular rate limits per user/token  
 
 ---
 
