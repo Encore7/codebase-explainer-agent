@@ -1,13 +1,18 @@
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.api.router import router as api_router
 from app.core.config import settings
 from app.core.db import engine, init_db
 from app.core.telemetry import get_logger, instrument_fastapi
+from app.utils.rate_limiter import limiter
+from app.utils.trace import _trace_attrs
 
 # Initialize logger first
 logger = get_logger(__name__)
@@ -24,7 +29,7 @@ app = FastAPI(
 # Instrument FastAPI after OTel setup
 instrument_fastapi(app)
 
-# Add CORS middleware
+# Middleware: CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.FRONTEND_CORS_ORIGINS,
@@ -33,18 +38,38 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Add session middleware
+# Middleware: Session
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.SECRET_KEY,
     session_cookie="session",
 )
 
+# Middleware: Rate Limiter (SlowAPI)
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
+
+
+# Exception Handler: Rate Limiting
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
+    logger.warning(
+        "Rate limit exceeded",
+        extra={"path": str(request.url.path), **_trace_attrs()},
+    )
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Rate limit exceeded. Please try again later."},
+    )
+
+
 # Register API routes
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
-# DB instrumentation and initialization
+# Instrument DB
 SQLAlchemyInstrumentor().instrument(engine=engine)
+
+# Init DB
 init_db()
 
 logger.info("Application initialized successfully.")
