@@ -3,10 +3,10 @@ from sqlmodel import Session
 
 from app.api_model.ingest import IngestRequest, IngestResponse, IngestStatusResponse
 from app.core.db import get_db
-from app.core.ingest import ingest_repo_task
 from app.core.security import get_current_user
 from app.core.telemetry import get_logger
 from app.crud.repo import create_repo_task, get_repo_task
+from app.services.ingest import ingest_repo_task
 from app.utils.trace import _trace_attrs
 
 router = APIRouter()
