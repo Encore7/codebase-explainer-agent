@@ -56,26 +56,26 @@ Codebase Explainer Agent is a FastAPI application for ingesting Git repositories
 
 ## Running Locally
 
-#### 1. Clone the Repo
+1. **Clone the Repo**
 
-```bash
-git clone git@github.com:Encore7/codebase-explainer-agent.git
-cd codebase-explainer-agent
-```
+    ```bash
+    git clone git@github.com:Encore7/codebase-explainer-agent.git
+    cd codebase-explainer-agent
+    ```
 
-#### 2. Set Environment Variables
+2. **Set Environment Variables**
 
-Set the environment variables from .env.example file
+    Set the environment variables from .env.example file
 
-#### 3. Run with Docker Compose
+3. **Run with Docker Compose**
 
-```bash
-docker-compose up --build
-```
+    ```bash
+    docker-compose up --build
+    ```
 
-#### 4. Access Docs
-- Swagger: http://localhost:8000/api/v1/docs
-- Redoc: http://localhost:8000/api/v1/redoc
+4. **Access Docs**
+    - Swagger: http://localhost:8000/api/v1/docs
+    - Redoc: http://localhost:8000/api/v1/redoc
 
 ## 🧪 Example Chat Flow
 
