@@ -5,6 +5,8 @@ from typing import Annotated, Any, Dict, List, TypedDict
 import chromadb
 from langchain_core.tools import tool
 from langgraph.graph import END, StateGraph
+from langsmith import traceable
+from langsmith.wrappers import wrap_openai
 from openai import OpenAI
 
 from app.core.config import settings
@@ -32,11 +34,9 @@ class AgentState(TypedDict, total=False):
     stream: Any
 
 
-# 1. Define the graph with schema
 _graph = StateGraph(state_schema=AgentState)
 
 
-# 2. Tool: Retrieve chunks from ChromaDB
 @tool
 async def retrieve(state: Annotated[AgentState, Any]) -> Annotated[AgentState, Any]:
     """Retrieve code chunks from ChromaDB based on the question.
@@ -65,7 +65,7 @@ async def retrieve(state: Annotated[AgentState, Any]) -> Annotated[AgentState, A
     return state
 
 
-# 3. Tool: Summarise each chunk using GPT
+@traceable(run_type="tool", name="summarise")
 @tool
 async def summarise(state: Annotated[AgentState, Any]) -> Annotated[AgentState, Any]:
     """Summarise each code chunk using GPT-4o.
@@ -76,7 +76,8 @@ async def summarise(state: Annotated[AgentState, Any]) -> Annotated[AgentState, 
     Raises:
         ValueError: If the state does not contain chunks.
     """
-    embedder = OpenAI(api_key=settings.OPENAI_API_KEY)
+    raw_client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    embedder = wrap_openai(raw_client)
     summaries: List[str] = []
     for chunk in state.get("chunks", []):
         prompt = (
@@ -99,7 +100,7 @@ async def summarise(state: Annotated[AgentState, Any]) -> Annotated[AgentState, 
     return state
 
 
-# 4. Tool: Compose final answer from summaries
+@traceable(run_type="tool", name="compose")
 @tool
 async def compose(state: Annotated[AgentState, Any]) -> Annotated[AgentState, Any]:
     """Compose the final answer from summaries.
@@ -110,7 +111,8 @@ async def compose(state: Annotated[AgentState, Any]) -> Annotated[AgentState, An
     Raises:
         ValueError: If the state does not contain summaries or question.
     """
-    embedder = OpenAI(api_key=settings.OPENAI_API_KEY)
+    raw_client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    embedder = wrap_openai(raw_client)
     bullets = "\n".join(f"- {s}" for s in state.get("summaries", []))
     prompt = (
         f"Question: {state['question']}\n\n"
@@ -130,7 +132,6 @@ async def compose(state: Annotated[AgentState, Any]) -> Annotated[AgentState, An
     return state
 
 
-# 5. Wire up tools and edges
 _graph.add_node("retrieve", retrieve)
 _graph.add_node("summarise", summarise)
 _graph.add_node("compose", compose)
@@ -140,7 +141,6 @@ _graph.add_edge("retrieve", "summarise")
 _graph.add_edge("summarise", "compose")
 _graph.add_edge("compose", END)
 
-# 6. Compile the agent once
 _agent = _graph.compile()
 
 
