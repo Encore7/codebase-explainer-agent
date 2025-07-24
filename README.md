@@ -23,6 +23,7 @@ Codebase Explainer Agent is a FastAPI application for ingesting Git repositories
   - OpenTelemetry traces (Tempo)  
   - Structured logs (Loki)  
   - Metrics (Prometheus)
+  - AI Agent Tool-level spans + LLM call details(LangSmith)
 
 - **⚖️ Rate Limiting with SlowAPI**  
   - Per-IP or per-user throttling  
@@ -50,7 +51,7 @@ Codebase Explainer Agent is a FastAPI application for ingesting Git repositories
 | **Vector Store** | ChromaDB |
 | **Embedding**    | OpenAI API |
 | **Agent**        | LangGraph |
-| **Observability**| OpenTelemetry, Tempo, Loki, Prometheus |
+| **Observability**| OpenTelemetry, Tempo, Loki, Prometheus, LangSmith |
 | **Rate Limiting**| SlowAPI |
 | **Background Tasks** | FastAPI BackgroundTasks (async ingestion) |
 
